@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Audit trail — live</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #111; color: #eee; margin: 0; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #333; }
+  th { color: #999; font-weight: 500; }
+  .allowed, .success { color: #6dd58c; }
+  .blocked, .failure { color: #e0645f; }
+  .pending_approval, .received { color: #e0b04f; }
+  .amount { text-align: right; font-variant-numeric: tabular-nums; }
+  .reason { color: #aaa; max-width: 380px; }
+</style>
+</head>
+<body>
+  <h1>Audit trail — live (polling every 2s)</h1>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Event</th><th>Decision</th><th>Order</th><th class="amount">Amount (₹)</th><th>Reason</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+<script>
+async function poll() {
+  try {
+    const res = await fetch('/audit-log?limit=50');
+    const data = await res.json();
+    const rows = document.getElementById('rows');
+    rows.innerHTML = data.events.map(e => {
+      const t = new Date(e.timestamp * 1000).toLocaleTimeString();
+      const amount = e.amount_paise != null ? (e.amount_paise / 100).toFixed(2) : '';
+      return `<tr>
+        <td>${t}</td>
+        <td>${e.event_type}</td>
+        <td class="${e.decision}">${e.decision}</td>
+        <td>${e.order_ref || ''}</td>
+        <td class="amount">${amount}</td>
+        <td class="reason">${e.reason || ''}</td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error('poll failed', err);
+  }
+}
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
